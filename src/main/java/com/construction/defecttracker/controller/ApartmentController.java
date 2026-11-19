@@ -20,7 +20,7 @@ public class ApartmentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<List<ApartmentSummaryDto>> getApartments(
             @RequestParam(name = "archived", defaultValue = "false") Boolean archived
     ) {
@@ -28,7 +28,7 @@ public class ApartmentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<ApartmentDetailDto> getApartmentDetail(@PathVariable Long id) {
         return ResponseEntity.ok(apartmentService.getApartmentDetail(id));
     }

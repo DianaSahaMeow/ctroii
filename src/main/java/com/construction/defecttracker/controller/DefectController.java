@@ -64,7 +64,7 @@ public class DefectController {
     }
 
     @GetMapping("/by-date")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<List<DefectDto>> getDefectsByDate(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
@@ -72,7 +72,7 @@ public class DefectController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<DefectDto> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateStatusRequest request
@@ -81,7 +81,7 @@ public class DefectController {
     }
 
     @PatchMapping("/{id}/urgency")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<DefectDto> updateUrgency(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUrgencyRequest request

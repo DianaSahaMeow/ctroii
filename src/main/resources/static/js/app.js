@@ -160,10 +160,10 @@ async function loadDashboardMetrics() {
         const resp = await fetch('/api/dashboard/metrics');
         if (resp.ok) {
             const m = await resp.json();
-            document.getElementById('kpiApartmentsInWork').innerText = m.apartmentsInWork;
-            document.getElementById('kpiOpenDefects').innerText = m.totalOpenDefects;
-            document.getElementById('kpiUrgentDefects').innerText = m.urgentOpenDefects;
-            document.getElementById('kpiClosedMonth').innerText = m.closedThisMonth;
+            safeSetText('kpiApartmentsInWork', m.apartmentsInWork);
+            safeSetText('kpiOpenDefects', m.totalOpenDefects);
+            safeSetText('kpiUrgentDefects', m.urgentOpenDefects);
+            safeSetText('kpiClosedMonth', m.closedThisMonth);
         }
     } catch (e) {
         console.error('Ошибка загрузки метрик:', e);
@@ -302,33 +302,34 @@ async function openApartmentModal(aptId) {
         if (!resp.ok) throw new Error('Квартира не найдена');
         const apt = await resp.json();
 
-        document.getElementById('aptModalTitle').innerText =
-            `ПОДЪЕЗД ${apt.entranceNumber}, КВАРТИРА ${apt.apartmentNumber}`;
+        safeSetText('aptModalTitle', `ПОДЪЕЗД ${apt.entranceNumber}, КВАРТИРА ${apt.apartmentNumber}`);
 
         const isArch = apt.isArchived;
-        document.getElementById('aptModalSubtitle').innerHTML = isArch
+        safeSetHtml('aptModalSubtitle', isArch
             ? '<span class="badge badge-low">В АРХИВЕ</span>'
             : (apt.canArchive
                 ? '<span class="badge badge-status-accepted">ВСЕ ДЕФЕКТЫ ПРИНЯТЫ &bull; ГОТОВА К АРХИВУ</span>'
-                : '<span class="badge badge-status-progress">В РАБОТЕ СТРОИТЕЛЕЙ</span>');
+                : '<span class="badge badge-status-progress">В РАБОТЕ СТРОИТЕЛЕЙ</span>'));
 
-        document.getElementById('aptModalSummaryText').innerHTML =
-            `Активных замечаний: <strong style="color: ${apt.activeDefects.length > 0 ? '#ff6b6b' : '#66bb6a'}">${apt.activeDefects.length}</strong> | Принятых: <strong style="color: #66bb6a">${apt.acceptedDefects.length}</strong>`;
+        safeSetHtml('aptModalSummaryText',
+            `Активных замечаний: <strong style="color: ${apt.activeDefects.length > 0 ? '#ff6b6b' : '#66bb6a'}">${apt.activeDefects.length}</strong> | Принятых: <strong style="color: #66bb6a">${apt.acceptedDefects.length}</strong>`);
 
         const archiveBtn = document.getElementById('btnArchiveApartment');
-        if (isArch) {
-            archiveBtn.style.display = 'none';
-        } else {
-            archiveBtn.style.display = 'inline-flex';
-            archiveBtn.disabled = !apt.canArchive;
-            archiveBtn.title = apt.canArchive ? 'Отправить квартиру в архив' : 'Доступно только когда все дефекты приняты';
+        if (archiveBtn) {
+            if (isArch) {
+                archiveBtn.style.display = 'none';
+            } else {
+                archiveBtn.style.display = 'inline-flex';
+                archiveBtn.disabled = !apt.canArchive;
+                archiveBtn.title = apt.canArchive ? 'Отправить квартиру в архив' : 'Доступно только когда все дефекты приняты';
+            }
         }
 
         renderApartmentDefectsList('aptActiveDefectsContainer', apt.activeDefects, false);
         renderApartmentDefectsList('aptAcceptedDefectsContainer', apt.acceptedDefects, true);
 
-        document.getElementById('activeDefectsCount').innerText = apt.activeDefects.length;
-        document.getElementById('acceptedDefectsCount').innerText = apt.acceptedDefects.length;
+        safeSetText('activeDefectsCount', apt.activeDefects.length);
+        safeSetText('acceptedDefectsCount', apt.acceptedDefects.length);
 
     } catch (e) {
         showToast('Ошибка загрузки карточки: ' + e.message, 'error');
@@ -530,8 +531,7 @@ const monthNames = [
 ];
 
 async function loadCalendar() {
-    document.getElementById('calendarMonthTitle').innerText =
-        `${monthNames[calendarCurrentMonth - 1]} ${calendarCurrentYear}`;
+    safeSetText('calendarMonthTitle', `${monthNames[calendarCurrentMonth - 1]} ${calendarCurrentYear}`);
 
     try {
         const resp = await fetch(`/api/dashboard/calendar?year=${calendarCurrentYear}&month=${calendarCurrentMonth}`);
