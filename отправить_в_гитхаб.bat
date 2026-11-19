@@ -1,13 +1,12 @@
 @echo off
 chcp 65001 > nul
 echo ============================================================
-echo   Отправка проекта в GitHub: DianaSahaMeow/ctroi
+echo   Отправка проекта в GitHub: DianaSahaMeow/ctroii
 echo ============================================================
 echo.
 
 git branch -M main
-git remote remove origin 2>nul
-git remote add origin https://github.com/DianaSahaMeow/ctroi.git
+git remote set-url origin https://github.com/DianaSahaMeow/ctroii.git 2>nul || git remote add origin https://github.com/DianaSahaMeow/ctroii.git
 git add .
 git commit -m "Complete Defect Tracker full stack with Neon cloud DB" 2>nul
 
@@ -21,15 +20,15 @@ if %ERRORLEVEL% equ 0 (
     echo.
     echo ============================================================
     echo [УСПЕХ] Проект успешно загружен в GitHub!
-    echo Ссылка: https://github.com/DianaSahaMeow/ctroi
+    echo Ссылка: https://github.com/DianaSahaMeow/ctroii
     echo.
-    echo Теперь на Render.com выберите этот репозиторий!
+    echo Теперь на Render.com выберите репозиторий ctroii!
     echo ============================================================
 ) else (
     echo.
-    echo [ВНИМАНИЕ] Если репозиторий не найден:
-    echo 1. Проверьте, что на https://github.com/DianaSahaMeow нажат 'Create repository' с именем 'ctroi'.
-    echo 2. Войдите в свой аккаунт DianaSahaMeow при запросе.
+    echo [ВНИМАНИЕ] Ошибка отправки.
+    echo 1. Проверьте, что репозиторий создан на https://github.com/DianaSahaMeow/ctroii
+    echo 2. Войдите в браузер под своим аккаунтом DianaSahaMeow.
 )
 
 echo.
