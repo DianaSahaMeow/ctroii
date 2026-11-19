@@ -1030,6 +1030,7 @@ function updateDefectsFilterCounts(defects) {
 
 function setDefectsFeedFilter(filter) {
     currentFeedFilter = filter;
+    window.currentFeedFilter = filter;
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
 
     if (filter === 'ALL') safeAddClass('chipAll', 'active');
@@ -1042,6 +1043,7 @@ function setDefectsFeedFilter(filter) {
 
 function onDefectsSearchInput(val) {
     currentSearchQuery = (val || '').trim().toLowerCase();
+    window.currentSearchQuery = currentSearchQuery;
     applyFeedFiltersAndRender();
 }
 
@@ -1049,26 +1051,30 @@ function clearDefectsSearch() {
     const inp = document.getElementById('quickDefectsSearchInput');
     if (inp) inp.value = '';
     currentSearchQuery = '';
+    window.currentSearchQuery = '';
     applyFeedFiltersAndRender();
 }
 
 function applyFeedFiltersAndRender() {
-    let filtered = allFeedDefects.slice();
+    let filtered = (typeof allFeedDefects !== 'undefined' && Array.isArray(allFeedDefects)) ? allFeedDefects.slice() : [];
 
-    if (currentFeedFilter === 'URGENT') {
+    const activeFilter = (typeof currentFeedFilter !== 'undefined') ? currentFeedFilter : 'ALL';
+    const activeSearch = (typeof currentSearchQuery !== 'undefined') ? currentSearchQuery : '';
+
+    if (activeFilter === 'URGENT') {
         filtered = filtered.filter(d => d.urgency === 'URGENT');
-    } else if (currentFeedFilter === 'IN_WORK') {
+    } else if (activeFilter === 'IN_WORK') {
         filtered = filtered.filter(d => d.status !== 'ACCEPTED');
-    } else if (currentFeedFilter === 'ACCEPTED') {
+    } else if (activeFilter === 'ACCEPTED') {
         filtered = filtered.filter(d => d.status === 'ACCEPTED');
     }
 
-    if (currentSearchQuery) {
+    if (activeSearch) {
         filtered = filtered.filter(d => {
             const aptStr = String(d.apartmentNumber || '');
             const entStr = String(d.entranceNumber || '');
             const desc = (d.description || '').toLowerCase();
-            return aptStr === currentSearchQuery || aptStr.includes(currentSearchQuery) || desc.includes(currentSearchQuery);
+            return aptStr === activeSearch || aptStr.includes(activeSearch) || desc.includes(activeSearch);
         });
     }
 
