@@ -11,6 +11,11 @@ let allApartments = [];
 let onlyUrgentActive = false;
 let currentApartmentId = null;
 
+// Состояние ленты дефектов
+let allFeedDefects = [];
+let currentFeedFilter = 'ALL';
+let currentSearchQuery = '';
+
 // Состояние календаря
 let calendarCurrentYear = new Date().getFullYear();
 let calendarCurrentMonth = new Date().getMonth() + 1; // 1-12
