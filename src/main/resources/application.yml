@@ -1,0 +1,48 @@
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+
+spring:
+  application:
+    name: defect-tracker
+
+  datasource:
+    # По умолчанию для мгновенного локального запуска без внешнего сервера используется встроенная база H2 (PostgreSQL-режим).
+    # Для переключения на реальный PostgreSQL укажите переменные окружения DB_URL/DB_USERNAME/DB_PASSWORD
+    # или запустите с профилем --spring.profiles.active=postgres
+    url: ${DB_URL:jdbc:h2:file:./data/defectdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+app:
+  upload:
+    dir: ${UPLOAD_DIR:./uploads/defects}
+    type: ${STORAGE_TYPE:local}
+
+logging:
+  level:
+    root: INFO
+    com.construction.defecttracker: DEBUG
+    org.springframework.security: INFO

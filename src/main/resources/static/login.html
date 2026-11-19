@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Вход в систему — СтройКонтроль</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 16px;
+            background-color: #0b0e12;
+        }
+        .login-card {
+            background-color: var(--bg-surface);
+            border: 2px solid var(--border-color);
+            width: 100%;
+            max-width: 440px;
+            padding: 32px 28px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+        .login-header {
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+        .login-badge {
+            display: inline-block;
+            background-color: var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-blue);
+            margin-bottom: 8px;
+        }
+        .login-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .quick-roles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .btn-quick-role {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .btn-quick-role:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+        .login-error {
+            display: none;
+            background-color: rgba(211, 47, 47, 0.15);
+            border: 1px solid var(--urgency-urgent);
+            color: #ff8a80;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .footer-note {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="login-header">
+        <div class="login-badge">МОДУЛЬ АВТОРИЗАЦИИ</div>
+        <h1 class="login-title">СТРОЙКОНТРОЛЬ</h1>
+        <div class="login-subtitle">Приемка квартир и учет строительных дефектов</div>
+    </div>
+
+    <div class="login-error" id="loginError">
+        Неверный логин или пароль
+    </div>
+
+    <!-- Быстрый выбор демонстрационных ролей -->
+    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+        Быстрый вход для тестирования:
+    </div>
+    <div class="quick-roles">
+        <button type="button" class="btn-quick-role" onclick="fillRole('manager', 'manager123')">
+            Руководитель
+        </button>
+        <button type="button" class="btn-quick-role" onclick="fillRole('worker1', 'worker123')">
+            Приемщик
+        </button>
+    </div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-field">
+            <label for="username">Имя пользователя (Логин)</label>
+            <input type="text" id="username" name="username" class="input-field" required autocomplete="username" autofocus>
+        </div>
+
+        <div class="form-field">
+            <label for="password">Пароль доступа</label>
+            <input type="password" id="password" name="password" class="input-field" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">
+            ВОЙТИ В СИСТЕМУ
+        </button>
+    </form>
+
+    <div class="footer-note">
+        ИНЖЕНЕРНАЯ СИСТЕМА УЧЕТА ДЕФЕКТОВ v1.0
+    </div>
+</div>
+
+<script>
+    function fillRole(u, p) {
+        document.getElementById('username').value = u;
+        document.getElementById('password').value = p;
+        document.getElementById('loginError').style.display = 'none';
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const errBox = document.getElementById('loginError');
+        const submitBtn = document.getElementById('submitBtn');
+
+        errBox.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'ПРОВЕРКА...';
+
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        try {
+            const resp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            });
+
+            if (resp.ok) {
+                window.location.href = '/';
+            } else {
+                errBox.style.display = 'block';
+                errBox.innerText = 'Неверный логин или пароль';
+            }
+        } catch (err) {
+            errBox.style.display = 'block';
+            errBox.innerText = 'Сбой сетевого подключения к серверу';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'ВОЙТИ В СИСТЕМУ';
+        }
+    }
+</script>
+
+</body>
+</html>

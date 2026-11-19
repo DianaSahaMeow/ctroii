@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>СтройКонтроль — Учет строительных дефектов</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Шапка приложения -->
+<header class="app-header">
+    <div class="brand">
+        <div class="brand-badge">ОБЪЕКТ #1</div>
+        <div class="brand-title">СТРОЙКОНТРОЛЬ</div>
+    </div>
+
+    <div class="user-panel">
+        <div class="user-info">
+            <div class="user-name" id="currentUserName">Загрузка...</div>
+            <div class="user-role-badge" id="currentUserRole">...</div>
+        </div>
+        <button type="button" class="btn-logout" onclick="logout()">ВЫХОД</button>
+    </div>
+</header>
+
+<!-- Панель навигации для РУКОВОДИТЕЛЯ -->
+<nav class="nav-bar" id="managerNav" style="display: none;">
+    <button class="nav-item active" onclick="switchManagerTab('dashboard')">Дашборд и Реестр</button>
+    <button class="nav-item" onclick="switchManagerTab('kpi')">КПД и Эффективность</button>
+    <button class="nav-item" onclick="switchManagerTab('calendar')">Календарь фиксации</button>
+    <button class="nav-item" onclick="switchManagerTab('archive')">Архив квартир</button>
+    <button class="nav-item" onclick="switchManagerTab('new-defect')">+ Зафиксировать дефект</button>
+</nav>
+
+<!-- Панель навигации для РАБОЧЕГО (Mobile-First) -->
+<nav class="nav-bar" id="workerNav" style="display: none;">
+    <button class="nav-item active" onclick="switchWorkerTab('create')">Новое замечание</button>
+    <button class="nav-item" onclick="switchWorkerTab('my-defects')">Мои замечания</button>
+</nav>
+
+<main class="container">
+
+    <!-- ========================================================================= -->
+    <!-- ВИД РУКОВОДИТЕЛЯ: ДАШБОРД                                                 -->
+    <!-- ========================================================================= -->
+    <section id="managerDashboardView" style="display: none;">
+        <!-- Сводные метрики (KPI) -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Квартир в работе</div>
+                <div class="metric-value" id="kpiApartmentsInWork">0</div>
+                <div class="metric-sub">Не переведены в архив</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Всего открытых дефектов</div>
+                <div class="metric-value" id="kpiOpenDefects">0</div>
+                <div class="metric-sub">Требуют устранения</div>
+            </div>
+
+            <div class="metric-card urgent-highlight">
+                <div class="metric-label">Срочные (Критичные)</div>
+                <div class="metric-value" id="kpiUrgentDefects">0</div>
+                <div class="metric-sub">Приоритет №1</div>
+            </div>
+
+            <div class="metric-card success-highlight">
+                <div class="metric-label">Принято за месяц</div>
+                <div class="metric-value" id="kpiClosedMonth">0</div>
+                <div class="metric-sub">Устранено и подтверждено</div>
+            </div>
+        </div>
+
+        <!-- Фильтры и быстрый поиск -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <span class="filter-label">Номер квартиры:</span>
+                <input type="number" id="filterAptNumber" class="input-field" placeholder="№ кв..." style="width: 110px;" oninput="applyFilters()">
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Подъезд:</span>
+                <select id="filterEntrance" class="select-field" onchange="applyFilters()">
+                    <option value="">Все подъезды</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Статус дефектов:</span>
+                <select id="filterStatus" class="select-field" onchange="applyFilters()">
+                    <option value="">Все статусы</option>
+                    <option value="NEW">Новый</option>
+                    <option value="IN_PROGRESS">В работе</option>
+                    <option value="FIXED">Исправлен</option>
+                    <option value="ACCEPTED">Принят</option>
+                </select>
+            </div>
+
+            <div class="filter-group" style="margin-top: 18px;">
+                <button type="button" class="btn-filter-urgent" id="btnOnlyUrgent" onclick="toggleOnlyUrgent()">
+                    <span>!</span> ТОЛЬКО СРОЧНЫЕ
+                </button>
+            </div>
+
+            <div class="filter-group" style="margin-top: 18px; margin-left: auto;">
+                <button type="button" class="btn-filter-reset" onclick="resetFilters()">СБРОС ФИЛЬТРОВ</button>
+            </div>
+        </div>
+
+        <!-- Реестр активных квартир -->
+        <div class="table-responsive">
+            <table class="eng-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Подъезд</th>
+                        <th style="width: 120px;">Квартира</th>
+                        <th>Всего дефектов</th>
+                        <th>Открыто</th>
+                        <th>Срочных (!)</th>
+                        <th>Последнее обновление</th>
+                        <th>Статус готовности</th>
+                        <th style="text-align: right;">Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="apartmentsTableBody">
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                            Загрузка реестра квартир...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ВИД РУКОВОДИТЕЛЯ: КПД И ЭФФЕКТИВНОСТЬ                                     -->
+    <!-- ========================================================================= -->
+    <section id="managerKpiView" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h2 style="font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Аналитика эффективности и КПД устранения дефектов
+                </h2>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+                    Оценка результативности подрядчиков, темпа закрытия замечаний и выработки специалистов
+                </div>
+            </div>
+            <button type="button" class="btn-filter-reset" onclick="loadEfficiencyMetrics()">
+                &#8635; ОБНОВИТЬ МЕТРИКИ
+            </button>
+        </div>
+
+        <!-- Ключевые карточки эффективности -->
+        <div class="metrics-grid" style="margin-bottom: 24px;">
+            <div class="metric-card">
+                <div class="metric-label">Общий КПД устранения</div>
+                <div class="metric-value" id="kpiOverallRate" style="color: #64b5f6;">0%</div>
+                <div class="kpi-progress-bar-bg">
+                    <div class="kpi-progress-bar-fill" id="kpiOverallBar" style="width: 0%; background-color: var(--accent-blue);"></div>
+                </div>
+                <div class="metric-sub" id="kpiOverallSub">0 из 0 замечаний принято</div>
+            </div>
+
+            <div class="metric-card urgent-highlight">
+                <div class="metric-label">КПД по срочным дефектам</div>
+                <div class="metric-value" id="kpiUrgentRate" style="color: #ff8a80;">0%</div>
+                <div class="kpi-progress-bar-bg">
+                    <div class="kpi-progress-bar-fill" id="kpiUrgentBar" style="width: 0%; background-color: #d32f2f;"></div>
+                </div>
+                <div class="metric-sub" id="kpiUrgentSub">Закрытие критичных позиций</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Среднее время закрытия (MTTR)</div>
+                <div class="metric-value" id="kpiAvgHours">0 ч</div>
+                <div class="metric-sub" id="kpiAvgDays" style="font-weight: 600; color: var(--text-primary); margin-top: 6px;">
+                    ~ 0 дн. на одно замечание
+                </div>
+            </div>
+
+            <div class="metric-card success-highlight">
+                <div class="metric-label">Недельный темп (Velocity)</div>
+                <div class="metric-value" id="kpiVelocityBadge" style="font-size: 16px; font-weight: 700; margin: 8px 0; color: #81c784;">
+                    СТАБИЛЬНЫЙ
+                </div>
+                <div class="metric-sub" id="kpiVelocitySub">
+                    За неделю: +0 открыто / 0 закрыто
+                </div>
+            </div>
+        </div>
+
+        <!-- Детализация темпа и объемов -->
+        <div class="kpi-details-grid">
+            <div class="kpi-panel">
+                <div class="kpi-panel-title">БАЛАНС ПОСТУПЛЕНИЯ И ЗАКРЫТИЯ</div>
+                <div class="kpi-stat-row">
+                    <span>Поступило дефектов за 7 дней:</span>
+                    <strong id="kpiWeeklyOpened">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Закрыто и принято за 7 дней:</span>
+                    <strong id="kpiWeeklyClosed" style="color: #81c784;">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Поступило дефектов за 30 дней:</span>
+                    <strong id="kpiMonthlyOpened">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Закрыто и принято за 30 дней:</span>
+                    <strong id="kpiMonthlyClosed" style="color: #81c784;">0</strong>
+                </div>
+            </div>
+
+            <div class="kpi-panel">
+                <div class="kpi-panel-title">СВОДНЫЙ СТАТУС В СИСТЕМЕ</div>
+                <div class="kpi-stat-row">
+                    <span>Всего зарегистрировано замечаний:</span>
+                    <strong id="kpiTotalCreated">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Успешно устранено и принято:</span>
+                    <strong id="kpiTotalAccepted" style="color: #81c784;">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Остается в работе / на контроле:</span>
+                    <strong id="kpiTotalInWork" style="color: #ffb74d;">0</strong>
+                </div>
+                <div class="kpi-stat-row">
+                    <span>Динамика устранения:</span>
+                    <span id="kpiVelocityStatusText" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблица выработки и статистики приемщиков -->
+        <div style="margin-top: 30px;">
+            <div class="section-divider" style="margin-bottom: 12px;">
+                ВЫРАБОТКА И СТАТИСТИКА ПО ПРИЕМЩИКАМ
+            </div>
+            <div class="table-responsive">
+                <table class="eng-table">
+                    <thead>
+                        <tr>
+                            <th>Специалист (Приемщик)</th>
+                            <th style="width: 150px; text-align: center;">Всего выявлено</th>
+                            <th style="width: 150px; text-align: center;">Из них срочных (!)</th>
+                            <th style="width: 150px; text-align: center;">Принято / закрыто</th>
+                            <th style="width: 150px; text-align: center;">Процент закрытия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workerStatsTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                Загрузка статистики приемщиков...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ВИД РУКОВОДИТЕЛЯ: КАЛЕНДАРЬ ФИКСАЦИИ                                      -->
+    <!-- ========================================================================= -->
+    <section id="managerCalendarView" style="display: none;">
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <button type="button" class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">&larr; Предыдущий</button>
+                <div class="calendar-month-title" id="calendarMonthTitle">Ноябрь 2026</div>
+                <button type="button" class="calendar-nav-btn" onclick="changeCalendarMonth(1)">Следующий &rarr;</button>
+            </div>
+
+            <div class="calendar-grid" id="calendarWeekdays">
+                <div class="calendar-weekday">Пн</div>
+                <div class="calendar-weekday">Вт</div>
+                <div class="calendar-weekday">Ср</div>
+                <div class="calendar-weekday">Чт</div>
+                <div class="calendar-weekday">Пт</div>
+                <div class="calendar-weekday">Сб</div>
+                <div class="calendar-weekday">Вс</div>
+            </div>
+
+            <div class="calendar-grid" id="calendarDaysGrid" style="margin-top: 8px;">
+                <!-- Ячейки дней генерируются через JS -->
+            </div>
+        </div>
+
+        <!-- Список замечаний за выбранную дату -->
+        <div id="calendarDayDefectsSection" style="margin-top: 24px; display: none;">
+            <div class="section-divider">
+                Замечания за <span id="calendarSelectedDateLabel" style="color: #fff; margin-left: 4px;">--</span>
+            </div>
+            <div id="calendarDefectsList"></div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ВИД РУКОВОДИТЕЛЯ: АРХИВ КВАРТИР                                           -->
+    <!-- ========================================================================= -->
+    <section id="managerArchiveView" style="display: none;">
+        <div style="margin-bottom: 16px; color: var(--text-secondary); font-size: 13px;">
+            Квартиры, по которым приняты 100% замечаний и подтвержден перевод в архив.
+            При фиксации нового дефекта квартира автоматически возвращается в активный реестр.
+        </div>
+
+        <div class="table-responsive">
+            <table class="eng-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Подъезд</th>
+                        <th style="width: 120px;">Квартира</th>
+                        <th>Всего дефектов</th>
+                        <th>Статус приемки</th>
+                        <th>Дата закрытия</th>
+                        <th style="text-align: right;">Карточка</th>
+                    </tr>
+                </thead>
+                <tbody id="archiveTableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                            Загрузка архива...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ФОРМА СОЗДАНИЯ ДЕФЕКТА (Для Рабочего и Руководителя)                       -->
+    <!-- ========================================================================= -->
+    <section id="defectCreateView" style="display: none;">
+        <div class="defect-form-container">
+            <div class="form-title">
+                <span>Фиксация дефекта</span>
+                <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">АКТ ОСМОТРА</span>
+            </div>
+
+            <form id="createDefectForm" onsubmit="submitDefect(event)">
+                <div class="form-grid-2">
+                    <div class="form-field">
+                        <label for="formEntrance">Подъезд *</label>
+                        <input type="number" id="formEntrance" name="entranceNumber" class="input-field" required min="1" placeholder="№ подъезда">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="formApartment">Квартира *</label>
+                        <input type="number" id="formApartment" name="apartmentNumber" class="input-field" required min="1" placeholder="№ квартиры">
+                    </div>
+                </div>
+
+                <!-- Переключатель уровня срочности (обязателен) -->
+                <div class="form-field">
+                    <label>Уровень срочности *</label>
+                    <div class="urgency-toggle-group">
+                        <label class="urgency-toggle-btn" id="urgencyBtnLow" onclick="selectUrgency('LOW')">
+                            <input type="radio" name="urgency" value="LOW">
+                            НИЗКАЯ
+                        </label>
+                        <label class="urgency-toggle-btn" id="urgencyBtnMedium" onclick="selectUrgency('MEDIUM')">
+                            <input type="radio" name="urgency" value="MEDIUM">
+                            СРЕДНЯЯ
+                        </label>
+                        <label class="urgency-toggle-btn" id="urgencyBtnUrgent" onclick="selectUrgency('URGENT')">
+                            <input type="radio" name="urgency" value="URGENT">
+                            ! СРОЧНО !
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="formDescription">Суть замечания / Что исправить *</label>
+                    <textarea id="formDescription" name="description" class="input-field" required placeholder="Опишите дефект, строительный конструктив и точное местоположение..."></textarea>
+                </div>
+
+                <!-- Фотофиксация с автоматическим клиентским сжатием -->
+                <div class="form-field">
+                    <label>Фотофиксация дефекта (Камера / Галерея)</label>
+                    <input type="file" id="photoFileInput" accept="image/*" multiple style="display: none;" onchange="handlePhotoSelection(this)">
+
+                    <div class="photo-upload-zone" onclick="document.getElementById('photoFileInput').click()">
+                        <div class="photo-upload-icon">&#128247;</div>
+                        <div class="photo-upload-text">СДЕЛАТЬ ФОТО ИЛИ ВЫБРАТЬ ИЗ ГАЛЕРЕИ</div>
+                        <div class="photo-upload-hint">Автоматическое сжатие для быстрого сохранения на стройплощадке</div>
+                    </div>
+
+                    <div class="upload-previews" id="uploadPreviewsContainer"></div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="btnSubmitDefect">
+                    ЗАРЕГИСТРИРОВАТЬ ДЕФЕКТ
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ВИД РАБОЧЕГО: МОИ ЗАМЕЧАНИЯ                                               -->
+    <!-- ========================================================================= -->
+    <section id="workerMyDefectsView" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="font-size: 16px; font-weight: 700; text-transform: uppercase;">
+                Журнал замечаний, зафиксированных мной
+            </div>
+            <button type="button" class="btn-filter-reset" onclick="loadMyDefects()">ОБНОВИТЬ СПИСОК</button>
+        </div>
+
+        <div id="workerDefectsList">
+            <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+                Загрузка замечаний...
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ========================================================================= -->
+<!-- МОДАЛЬНОЕ ОКНО: КАРТОЧКА КВАРТИРЫ (Для руководителя)                      -->
+<!-- ========================================================================= -->
+<div class="modal-backdrop" id="apartmentModal" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="aptModalTitle">ПОДЪЕЗД 1, КВАРТИРА 14</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="aptModalSubtitle">
+                    Статус: В работе
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeApartmentModal()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <!-- Панель действий по квартире -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px 16px; background-color: var(--bg-main); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
+                <div style="font-size: 13px;" id="aptModalSummaryText">
+                    Открытых замечаний: <strong>0</strong> | Принято: <strong>0</strong>
+                </div>
+                <button type="button" class="btn-archive" id="btnArchiveApartment" onclick="archiveCurrentApartment()" disabled>
+                    &#128193; ОТПРАВИТЬ В АРХИВ
+                </button>
+            </div>
+
+            <!-- Раздел 1: Активные дефекты -->
+            <div class="section-divider">
+                АКТИВНЫЕ ЗАМЕЧАНИЯ (<span id="activeDefectsCount">0</span>)
+            </div>
+            <div id="aptActiveDefectsContainer">
+                <div style="color: var(--text-muted); padding: 10px 0;">Активных замечаний нет</div>
+            </div>
+
+            <!-- Раздел 2: История принятых и закрытых замечаний -->
+            <div class="section-divider">
+                ИСТОРИЯ ПРИНЯТЫХ И ЗАКРЫТЫХ ЗАМЕЧАНИЙ (<span id="acceptedDefectsCount">0</span>)
+            </div>
+            <div id="aptAcceptedDefectsContainer">
+                <div style="color: var(--text-muted); padding: 10px 0;">Принятых замечаний нет</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- МОДАЛЬНОЕ ОКНО: LIGHTBOX ПРОСМОТРА ФОТО                                   -->
+<!-- ========================================================================= -->
+<div class="modal-backdrop" id="lightboxModal" style="display: none;" onclick="closeLightbox()">
+    <div class="lightbox-dialog" onclick="event.stopPropagation()">
+        <button type="button" class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <img src="" id="lightboxImage" class="lightbox-img" alt="Фото дефекта">
+    </div>
+</div>
+
+<!-- Всплывающее уведомление -->
+<div class="alert-toast" id="alertToast" style="display: none;">
+    <span id="toastMessage">Уведомление</span>
+</div>
+
+<script src="/js/image-compressor.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

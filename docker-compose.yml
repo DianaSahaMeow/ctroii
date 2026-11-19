@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Реляционная база данных PostgreSQL 16
+  db:
+    image: postgres:16-alpine
+    container_name: defect_tracker_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: defect_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_secure_password_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d defect_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Веб-приложение СтройКонтроль (Spring Boot 3 + Frontend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: defect_tracker_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: defect_tracker
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres_secure_password_2026
+      UPLOAD_DIR: /app/uploads/defects
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      # Постоянное хранилище фотофиксации
+      - defect_photos_storage:/app/uploads/defects
+
+volumes:
+  postgres_data:
+  defect_photos_storage:
