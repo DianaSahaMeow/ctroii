@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>СтройКонтроль — Учет строительных дефектов</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=2.2">
 </head>
 <body>
 
@@ -24,19 +27,20 @@
     </div>
 </header>
 
-<!-- Панель навигации для РУКОВОДИТЕЛЯ -->
+<!-- Панель навигации для РУКОВОДИТЕЛЯ (Десктоп) -->
 <nav class="nav-bar" id="managerNav" style="display: none;">
-    <button class="nav-item active" onclick="switchManagerTab('dashboard')">Дашборд и Реестр</button>
-    <button class="nav-item" onclick="switchManagerTab('kpi')">КПД и Эффективность</button>
-    <button class="nav-item" onclick="switchManagerTab('calendar')">Календарь фиксации</button>
-    <button class="nav-item" onclick="switchManagerTab('archive')">Архив квартир</button>
-    <button class="nav-item" onclick="switchManagerTab('new-defect')">+ Зафиксировать дефект</button>
+    <button class="nav-item active" id="tabBtnNewDefect" onclick="switchAppTab('create')">⚡ + Зафиксировать дефект</button>
+    <button class="nav-item" id="tabBtnDefects" onclick="switchAppTab('defects')">📋 Все дефекты</button>
+    <button class="nav-item" id="tabBtnApartments" onclick="switchAppTab('apartments')">🏢 Квартиры</button>
+    <button class="nav-item" id="tabBtnKpi" onclick="switchAppTab('kpi')">📊 Аналитика и КПД</button>
+    <button class="nav-item" id="tabBtnCalendar" onclick="switchAppTab('calendar')">📅 Календарь</button>
+    <button class="nav-item" id="tabBtnArchive" onclick="switchAppTab('archive')">📁 Архив</button>
 </nav>
 
-<!-- Панель навигации для РАБОЧЕГО (Mobile-First) -->
+<!-- Панель навигации для РАБОЧЕГО (Десктоп) -->
 <nav class="nav-bar" id="workerNav" style="display: none;">
-    <button class="nav-item active" onclick="switchWorkerTab('create')">Новое замечание</button>
-    <button class="nav-item" onclick="switchWorkerTab('my-defects')">Мои замечания</button>
+    <button class="nav-item active" id="tabWorkerBtnCreate" onclick="switchAppTab('create')">⚡ + Зафиксировать дефект</button>
+    <button class="nav-item" id="tabWorkerBtnDefects" onclick="switchAppTab('defects')">📋 Мои замечания</button>
 </nav>
 
 <main class="container">
@@ -330,12 +334,39 @@
     </section>
 
     <!-- ========================================================================= -->
-    <!-- ФОРМА СОЗДАНИЯ ДЕФЕКТА (Для Рабочего и Руководителя)                       -->
+    <!-- БЫСТРЫЙ ПРОСМОТР ИМЕЮЩИХСЯ ДЕФЕКТОВ (Mobile-First Лента)                   -->
+    <!-- ========================================================================= -->
+    <section id="defectsFeedView" style="display: none;">
+        <!-- Быстрый поиск по номеру квартиры прямо под пальцем -->
+        <div class="mobile-search-bar">
+            <span style="font-size: 18px;">🔍</span>
+            <input type="number" id="quickDefectsSearchInput" placeholder="Быстрый поиск: введите № кв..." oninput="onDefectsSearchInput(this.value)">
+            <button type="button" class="btn-clear-search" onclick="clearDefectsSearch()" title="Очистить">&times;</button>
+        </div>
+
+        <!-- Быстрые фильтры-чипсы в 1 касание -->
+        <div class="filter-chip-row">
+            <button type="button" class="filter-chip active" id="chipAll" onclick="setDefectsFeedFilter('ALL')">Все (<span id="countDefectsAll">0</span>)</button>
+            <button type="button" class="filter-chip urgent-chip" id="chipUrgent" onclick="setDefectsFeedFilter('URGENT')">🔥 Срочные (<span id="countDefectsUrgent">0</span>)</button>
+            <button type="button" class="filter-chip" id="chipInWork" onclick="setDefectsFeedFilter('IN_WORK')">В работе (<span id="countDefectsInWork">0</span>)</button>
+            <button type="button" class="filter-chip" id="chipAccepted" onclick="setDefectsFeedFilter('ACCEPTED')">Приняты (<span id="countDefectsAccepted">0</span>)</button>
+        </div>
+
+        <!-- Лента карточек дефектов -->
+        <div id="defectsFeedListContainer">
+            <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+                Загрузка замечаний...
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ФОРМА СОЗДАНИЯ ДЕФЕКТА (Быстрая фиксация на стройплощадке)                -->
     <!-- ========================================================================= -->
     <section id="defectCreateView" style="display: none;">
         <div class="defect-form-container">
             <div class="form-title">
-                <span>Фиксация дефекта</span>
+                <span>⚡ Быстрая фиксация дефекта</span>
                 <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">АКТ ОСМОТРА</span>
             </div>
 
@@ -343,18 +374,18 @@
                 <div class="form-grid-2">
                     <div class="form-field">
                         <label for="formEntrance">Подъезд *</label>
-                        <input type="number" id="formEntrance" name="entranceNumber" class="input-field" required min="1" placeholder="№ подъезда">
+                        <input type="number" id="formEntrance" name="entranceNumber" class="input-field" required min="1" placeholder="№ подъезда" style="font-size: 18px; font-weight: 700;">
                     </div>
 
                     <div class="form-field">
                         <label for="formApartment">Квартира *</label>
-                        <input type="number" id="formApartment" name="apartmentNumber" class="input-field" required min="1" placeholder="№ квартиры">
+                        <input type="number" id="formApartment" name="apartmentNumber" class="input-field" required min="1" placeholder="№ квартиры" style="font-size: 18px; font-weight: 700;">
                     </div>
                 </div>
 
-                <!-- Переключатель уровня срочности (обязателен) -->
+                <!-- Переключатель уровня срочности (крупные цветные плашки под палец) -->
                 <div class="form-field">
-                    <label>Уровень срочности *</label>
+                    <label>Уровень срочности замечания *</label>
                     <div class="urgency-toggle-group">
                         <label class="urgency-toggle-btn" id="urgencyBtnLow" onclick="selectUrgency('LOW')">
                             <input type="radio" name="urgency" value="LOW">
@@ -371,27 +402,47 @@
                     </div>
                 </div>
 
-                <div class="form-field">
-                    <label for="formDescription">Суть замечания / Что исправить *</label>
-                    <textarea id="formDescription" name="description" class="input-field" required placeholder="Опишите дефект, строительный конструктив и точное местоположение..."></textarea>
+                <!-- Быстрые шаблоны в 1 клик для ускорения на объекте -->
+                <div class="form-field" style="margin-bottom: 6px;">
+                    <label>Быстрый шаблон (вставка в 1 клик):</label>
+                    <div class="quick-template-chips">
+                        <button type="button" class="template-chip" onclick="applyTemplate('Скол / царапины на стеклопакете. Нарушена регулировка створки окна.')">🪟 Окно / Стеклопакет</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Трещина в стяжке пола. Перепад высот превышает допуск.')">📐 Стяжка пола</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Продувание по контуру уплотнителя балконной двери/окна.')">💨 Продувание</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Неровность оштукатуренной стены, наплывы раствора.')">🧱 Стены / Штукатурка</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Следы протечки / капли на стояке водоснабжения/отопления.')">💧 Стояк / Сантехника</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Повреждение / скол полотна или замка входной двери.')">🚪 Входная дверь</button>
+                        <button type="button" class="template-chip" onclick="applyTemplate('Отсутствует тяга в вентиляционном канале.')">🌀 Вентиляция</button>
+                    </div>
                 </div>
 
-                <!-- Фотофиксация с автоматическим клиентским сжатием -->
                 <div class="form-field">
-                    <label>Фотофиксация дефекта (Камера / Галерея)</label>
+                    <label for="formDescription">Суть замечания / Что исправить *</label>
+                    <textarea id="formDescription" name="description" class="input-field" required placeholder="Опишите дефект или выберите шаблон выше..." style="min-height: 80px; font-size: 15px;"></textarea>
+                </div>
+
+                <!-- Фотофиксация: Прямая камера смартфона + выбор из галереи -->
+                <div class="form-field">
+                    <label>Фотофиксация дефекта:</label>
+                    <input type="file" id="cameraDirectInput" accept="image/*" capture="environment" multiple style="display: none;" onchange="handlePhotoSelection(this)">
                     <input type="file" id="photoFileInput" accept="image/*" multiple style="display: none;" onchange="handlePhotoSelection(this)">
 
-                    <div class="photo-upload-zone" onclick="document.getElementById('photoFileInput').click()">
-                        <div class="photo-upload-icon">&#128247;</div>
-                        <div class="photo-upload-text">СДЕЛАТЬ ФОТО ИЛИ ВЫБРАТЬ ИЗ ГАЛЕРЕИ</div>
-                        <div class="photo-upload-hint">Автоматическое сжатие для быстрого сохранения на стройплощадке</div>
+                    <div class="photo-buttons-grid">
+                        <button type="button" class="btn-photo-action primary-camera" onclick="document.getElementById('cameraDirectInput').click()">
+                            <span style="font-size: 20px;">📸</span>
+                            <span>СНЯТЬ НА КАМЕРУ</span>
+                        </button>
+                        <button type="button" class="btn-photo-action" onclick="document.getElementById('photoFileInput').click()">
+                            <span style="font-size: 20px;">🖼️</span>
+                            <span>ИЗ ГАЛЕРЕИ</span>
+                        </button>
                     </div>
 
                     <div class="upload-previews" id="uploadPreviewsContainer"></div>
                 </div>
 
-                <button type="submit" class="btn-primary" id="btnSubmitDefect">
-                    ЗАРЕГИСТРИРОВАТЬ ДЕФЕКТ
+                <button type="submit" class="btn-primary" id="btnSubmitDefect" style="height: 52px; font-size: 15px; letter-spacing: 0.5px;">
+                    💾 СОХРАНИТЬ ДЕФЕКТ
                 </button>
             </form>
         </div>
@@ -477,7 +528,27 @@
     <span id="toastMessage">Уведомление</span>
 </div>
 
-<script src="/js/image-compressor.js"></script>
-<script src="/js/app.js"></script>
+<!-- Нижняя мобильная панель навигации под большой палец (Mobile-First) -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <button type="button" class="mobile-nav-btn create-btn active" id="mNavCreate" onclick="switchAppTab('create')">
+        <span class="nav-icon">⚡</span>
+        <span>+ Дефект</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mNavDefects" onclick="switchAppTab('defects')">
+        <span class="nav-icon">📋</span>
+        <span>Дефекты</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mNavApartments" onclick="switchAppTab('apartments')">
+        <span class="nav-icon">🏢</span>
+        <span>Квартиры</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mNavKpi" onclick="switchAppTab('kpi')">
+        <span class="nav-icon">📊</span>
+        <span>Аналитика</span>
+    </button>
+</nav>
+
+<script src="/js/image-compressor.js?v=2.2"></script>
+<script src="/js/app.js?v=2.2"></script>
 </body>
 </html>

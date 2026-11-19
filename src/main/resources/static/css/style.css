@@ -1192,8 +1192,212 @@ body {
   color: #fff;
 }
 
+/* ==========================================================================
+   МОБИЛЬНЫЙ ИНТЕРФЕЙС И БЫСТРАЯ ФИКСАЦИЯ
+   ========================================================================== */
+
+/* Быстрые строительные шаблоны */
+.quick-template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.template-chip {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.template-chip:hover, .template-chip:active {
+  background-color: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+/* Две кнопки фото: Камера и Галерея */
+.photo-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.btn-photo-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  background-color: var(--bg-card);
+  border: 2px dashed var(--border-focus);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-photo-action.primary-camera {
+  background-color: rgba(49, 130, 206, 0.15);
+  border-color: var(--accent-blue);
+  color: #90cdf4;
+}
+
+.btn-photo-action:active, .btn-photo-action:hover {
+  background-color: var(--accent-blue);
+  color: #fff;
+  border-style: solid;
+}
+
+/* Поиск по дефектам */
+.mobile-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.mobile-search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+}
+
+.mobile-search-bar input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-clear-search {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+/* Фильтры чипсы */
+.filter-chip-row {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  white-space: nowrap;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.filter-chip.active {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+
+.filter-chip.urgent-chip.active {
+  background-color: var(--urgency-urgent);
+  border-color: var(--urgency-urgent);
+  color: #fff;
+}
+
+/* Нижняя навигация для мобильных телефонов */
+.mobile-bottom-nav {
+  display: none;
+}
+
 /* Адаптивность для мобильных экранов */
 @media (max-width: 768px) {
+  body {
+    padding-bottom: 76px;
+  }
+
+  .nav-bar {
+    display: none !important;
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background-color: #11161d;
+    border-top: 1px solid var(--border-color);
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 4px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-nav-btn .nav-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+
+  .mobile-nav-btn.active {
+    color: #90cdf4;
+  }
+
+  .mobile-nav-btn.create-btn {
+    color: #ffb74d;
+  }
+
+  .mobile-nav-btn.create-btn.active {
+    color: #ffa726;
+  }
+
   .app-header {
     padding: 10px 14px;
   }
@@ -1203,17 +1407,22 @@ body {
   }
 
   .container {
-    padding: 14px 10px;
+    padding: 12px 10px;
   }
 
   .form-grid-2 {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .urgency-toggle-group {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  .urgency-toggle-btn {
+    font-size: 12px;
+    padding: 10px 4px;
   }
 
   .metrics-grid {

@@ -33,11 +33,17 @@ async function initApp() {
         if (currentUser.role === 'MANAGER') {
             document.getElementById('managerNav').style.display = 'flex';
             document.getElementById('workerNav').style.display = 'none';
-            switchManagerTab('dashboard');
+            safeSetDisplay('mNavApartments', 'flex');
+            safeSetDisplay('mNavKpi', 'flex');
+            switchAppTab('create');
         } else {
             document.getElementById('managerNav').style.display = 'none';
             document.getElementById('workerNav').style.display = 'flex';
-            switchWorkerTab('create');
+            safeSetDisplay('mNavApartments', 'none');
+            safeSetDisplay('mNavKpi', 'none');
+            const mDefectsLabel = document.querySelector('#mNavDefects span:last-child');
+            if (mDefectsLabel) mDefectsLabel.innerText = 'Мои дефекты';
+            switchAppTab('create');
         }
     } catch (e) {
         window.location.href = '/login.html';
@@ -45,9 +51,8 @@ async function initApp() {
 }
 
 function renderUserInfo() {
-    document.getElementById('currentUserName').innerText = currentUser.fullName;
-    document.getElementById('currentUserRole').innerText =
-        currentUser.role === 'MANAGER' ? 'НАЧАЛЬНИК УЧАСТКА' : 'ПРИЕМЩИК';
+    safeSetText('currentUserName', currentUser.fullName);
+    safeSetText('currentUserRole', currentUser.role === 'MANAGER' ? 'НАЧАЛЬНИК УЧАСТКА' : 'ПРИЕМЩИК');
 }
 
 async function logout() {
@@ -59,59 +64,91 @@ async function logout() {
 }
 
 /* ==========================================================================
-   ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
+   ЕДИНАЯ НАВИГАЦИЯ И ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (MOBILE-FIRST)
    ========================================================================== */
 
-function switchManagerTab(tab) {
-    document.querySelectorAll('#managerNav .nav-item').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('managerDashboardView').style.display = 'none';
-    if (document.getElementById('managerKpiView')) document.getElementById('managerKpiView').style.display = 'none';
-    document.getElementById('managerCalendarView').style.display = 'none';
-    document.getElementById('managerArchiveView').style.display = 'none';
-    document.getElementById('defectCreateView').style.display = 'none';
-    document.getElementById('workerMyDefectsView').style.display = 'none';
+function switchAppTab(tab) {
+    // 1. Снимаем активный класс со всех кнопок десктопа и мобильной панели
+    document.querySelectorAll('.nav-bar .nav-item').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.mobile-bottom-nav .mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
 
-    if (tab === 'dashboard') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('managerDashboardView').style.display = 'block';
+    // 2. Скрываем все разделы
+    const views = [
+        'defectCreateView',
+        'defectsFeedView',
+        'managerDashboardView',
+        'managerKpiView',
+        'managerCalendarView',
+        'managerArchiveView',
+        'workerMyDefectsView'
+    ];
+    views.forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.style.display = 'none';
+    });
+
+    if (tab === 'create') {
+        const topBtn = currentUser && currentUser.role === 'MANAGER' ? document.getElementById('tabBtnNewDefect') : document.getElementById('tabWorkerBtnCreate');
+        if (topBtn) topBtn.classList.add('active');
+        safeAddClass('mNavCreate', 'active');
+
+        safeSetDisplay('defectCreateView', 'block');
+        resetDefectForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } else if (tab === 'defects') {
+        const topBtn = currentUser && currentUser.role === 'MANAGER' ? document.getElementById('tabBtnDefects') : document.getElementById('tabWorkerBtnDefects');
+        if (topBtn) topBtn.classList.add('active');
+        safeAddClass('mNavDefects', 'active');
+
+        safeSetDisplay('defectsFeedView', 'block');
+        loadDefectsFeed();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } else if (tab === 'apartments') {
+        safeAddClass('tabBtnApartments', 'active');
+        safeAddClass('mNavApartments', 'active');
+
+        safeSetDisplay('managerDashboardView', 'block');
         loadDashboardMetrics();
         loadEntrancesFilter();
         loadApartmentsRegistry();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
     } else if (tab === 'kpi') {
-        event && event.target && event.target.classList.add('active');
-        if (document.getElementById('managerKpiView')) {
-            document.getElementById('managerKpiView').style.display = 'block';
-        }
+        safeAddClass('tabBtnKpi', 'active');
+        safeAddClass('mNavKpi', 'active');
+
+        safeSetDisplay('managerKpiView', 'block');
         loadEfficiencyMetrics();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
     } else if (tab === 'calendar') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('managerCalendarView').style.display = 'block';
+        safeAddClass('tabBtnCalendar', 'active');
+
+        safeSetDisplay('managerCalendarView', 'block');
         loadCalendar();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
     } else if (tab === 'archive') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('managerArchiveView').style.display = 'block';
+        safeAddClass('tabBtnArchive', 'active');
+
+        safeSetDisplay('managerArchiveView', 'block');
         loadArchiveRegistry();
-    } else if (tab === 'new-defect') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('defectCreateView').style.display = 'block';
-        resetDefectForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
-function switchWorkerTab(tab) {
-    document.querySelectorAll('#workerNav .nav-item').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('defectCreateView').style.display = 'none';
-    document.getElementById('workerMyDefectsView').style.display = 'none';
+// Функции для обратной совместимости вызовов из старых обработчиков:
+function switchManagerTab(tab) {
+    if (tab === 'dashboard') switchAppTab('apartments');
+    else if (tab === 'new-defect') switchAppTab('create');
+    else switchAppTab(tab);
+}
 
-    if (tab === 'create') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('defectCreateView').style.display = 'block';
-        resetDefectForm();
-    } else if (tab === 'my-defects') {
-        event && event.target && event.target.classList.add('active');
-        document.getElementById('workerMyDefectsView').style.display = 'block';
-        loadMyDefects();
-    }
+function switchWorkerTab(tab) {
+    if (tab === 'my-defects') switchAppTab('defects');
+    else switchAppTab(tab);
 }
 
 /* ==========================================================================
@@ -938,7 +975,226 @@ async function submitDefectComment(defectId) {
 }
 
 /* ==========================================================================
-   КПД И АНАЛИТИКА ЭФФЕКТИВНОСТИ
+   БЫСТРЫЕ ШАБЛОНЫ И ЛЕНТА ДЕФЕКТОВ (MOBILE-FIRST)
+   ========================================================================== */
+
+function applyTemplate(text) {
+    const desc = document.getElementById('formDescription');
+    if (!desc) return;
+    if (desc.value.trim().length > 0) {
+        desc.value = desc.value.trim() + '. ' + text;
+    } else {
+        desc.value = text;
+    }
+    desc.focus();
+}
+
+async function loadDefectsFeed() {
+    const container = document.getElementById('defectsFeedListContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка списка замечаний...</div>';
+
+    try {
+        const url = (currentUser && currentUser.role === 'WORKER') ? '/api/defects/my' : '/api/defects/search';
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            container.innerHTML = '<div style="color: #ff8a80; padding: 20px; text-align: center;">Не удалось загрузить замечания</div>';
+            return;
+        }
+
+        allFeedDefects = await resp.json();
+        updateDefectsFilterCounts(allFeedDefects);
+        applyFeedFiltersAndRender();
+    } catch (e) {
+        container.innerHTML = `<div style="color: #ff8a80; padding: 20px; text-align: center;">Ошибка сети: ${e.message}</div>`;
+    }
+}
+
+function updateDefectsFilterCounts(defects) {
+    const all = defects.length;
+    const urgent = defects.filter(d => d.urgency === 'URGENT').length;
+    const inWork = defects.filter(d => d.status !== 'ACCEPTED').length;
+    const accepted = defects.filter(d => d.status === 'ACCEPTED').length;
+
+    safeSetText('countDefectsAll', all);
+    safeSetText('countDefectsUrgent', urgent);
+    safeSetText('countDefectsInWork', inWork);
+    safeSetText('countDefectsAccepted', accepted);
+}
+
+function setDefectsFeedFilter(filter) {
+    currentFeedFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+
+    if (filter === 'ALL') safeAddClass('chipAll', 'active');
+    else if (filter === 'URGENT') safeAddClass('chipUrgent', 'active');
+    else if (filter === 'IN_WORK') safeAddClass('chipInWork', 'active');
+    else if (filter === 'ACCEPTED') safeAddClass('chipAccepted', 'active');
+
+    applyFeedFiltersAndRender();
+}
+
+function onDefectsSearchInput(val) {
+    currentSearchQuery = (val || '').trim().toLowerCase();
+    applyFeedFiltersAndRender();
+}
+
+function clearDefectsSearch() {
+    const inp = document.getElementById('quickDefectsSearchInput');
+    if (inp) inp.value = '';
+    currentSearchQuery = '';
+    applyFeedFiltersAndRender();
+}
+
+function applyFeedFiltersAndRender() {
+    let filtered = allFeedDefects.slice();
+
+    if (currentFeedFilter === 'URGENT') {
+        filtered = filtered.filter(d => d.urgency === 'URGENT');
+    } else if (currentFeedFilter === 'IN_WORK') {
+        filtered = filtered.filter(d => d.status !== 'ACCEPTED');
+    } else if (currentFeedFilter === 'ACCEPTED') {
+        filtered = filtered.filter(d => d.status === 'ACCEPTED');
+    }
+
+    if (currentSearchQuery) {
+        filtered = filtered.filter(d => {
+            const aptStr = String(d.apartmentNumber || '');
+            const entStr = String(d.entranceNumber || '');
+            const desc = (d.description || '').toLowerCase();
+            return aptStr === currentSearchQuery || aptStr.includes(currentSearchQuery) || desc.includes(currentSearchQuery);
+        });
+    }
+
+    renderDefectsFeed(filtered);
+}
+
+function renderDefectsFeed(defects) {
+    const container = document.getElementById('defectsFeedListContainer');
+    if (!container) return;
+
+    if (!defects || defects.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); padding: 40px; background: var(--bg-surface); border: 1px dashed var(--border-color); border-radius: 4px;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
+                <div style="font-size: 15px; font-weight: 600; color: var(--text-primary);">Замечаний не найдено</div>
+                <div style="font-size: 13px; margin-top: 4px;">Попробуйте изменить поисковый запрос или фильтр</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = defects.map(d => {
+        const isUrgent = d.urgency === 'URGENT';
+        const isAccepted = d.status === 'ACCEPTED';
+        const cardClass = isUrgent ? 'urgent-border' : (isAccepted ? 'accepted-border' : '');
+
+        const photosHtml = d.photos && d.photos.length > 0
+            ? `<div class="defect-photos-grid">
+                ${d.photos.map(p => `
+                    <img src="${p.url}" class="defect-photo-thumb" alt="Фото дефекта" onclick="openLightbox('${p.url}')" title="Кликните для полноразмерного просмотра">
+                `).join('')}
+               </div>`
+            : '';
+
+        // Элементы управления для руководителя прямо на карточке
+        const isManager = currentUser && currentUser.role === 'MANAGER';
+        const controlsHtml = isManager ? `
+            <div class="defect-actions" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                <div class="control-inline">
+                    <span class="control-label">Срочность:</span>
+                    <select class="select-field" style="padding: 4px 8px; min-height: 32px; font-size: 12px;" onchange="changeDefectUrgencyFeed(${d.id}, this.value)">
+                        <option value="LOW" ${d.urgency === 'LOW' ? 'selected' : ''}>НИЗКАЯ</option>
+                        <option value="MEDIUM" ${d.urgency === 'MEDIUM' ? 'selected' : ''}>СРЕДНЯЯ</option>
+                        <option value="URGENT" ${d.urgency === 'URGENT' ? 'selected' : ''}>! СРОЧНО !</option>
+                    </select>
+                </div>
+
+                <div class="control-inline">
+                    <span class="control-label">Статус:</span>
+                    <select class="select-field" style="padding: 4px 8px; min-height: 32px; font-size: 12px; font-weight: 700;" onchange="changeDefectStatusFeed(${d.id}, this.value)">
+                        <option value="NEW" ${d.status === 'NEW' ? 'selected' : ''}>НОВЫЙ</option>
+                        <option value="IN_PROGRESS" ${d.status === 'IN_PROGRESS' ? 'selected' : ''}>В РАБОТЕ</option>
+                        <option value="FIXED" ${d.status === 'FIXED' ? 'selected' : ''}>ИСПРАВЛЕН</option>
+                        <option value="ACCEPTED" ${d.status === 'ACCEPTED' ? 'selected' : ''}>ПРИНЯТ &#10003;</option>
+                    </select>
+                </div>
+            </div>
+        ` : '';
+
+        return `
+            <div class="defect-item-card ${cardClass}" style="margin-bottom: 14px;">
+                <div class="defect-header" style="flex-wrap: wrap; gap: 6px;">
+                    <div style="font-size: 16px; font-weight: 700; color: #fff;">
+                        Подъезд ${d.entranceNumber}, Кв. ${d.apartmentNumber}
+                    </div>
+                    <div class="defect-meta">
+                        <span class="badge ${getUrgencyBadgeClass(d.urgency)}">${d.urgencyDisplayName}</span>
+                        <span class="badge ${getStatusBadgeClass(d.status)}">${d.statusDisplayName}</span>
+                    </div>
+                </div>
+
+                <div class="defect-body" style="font-size: 15px; margin: 10px 0; color: #f0f6fc;">
+                    ${escapeHtml(d.description)}
+                </div>
+
+                ${photosHtml}
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
+                    <span>Приемщик: <strong style="color: var(--text-secondary);">${escapeHtml(d.workerName)}</strong></span>
+                    <span>&#128337; ${formatDate(d.createdAt)}</span>
+                </div>
+
+                ${controlsHtml}
+                ${renderDefectCommentsHtml(d)}
+            </div>
+        `;
+    }).join('');
+}
+
+async function changeDefectStatusFeed(defectId, newStatus) {
+    try {
+        const resp = await fetch(`/api/defects/${defectId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (resp.ok) {
+            showToast('Статус дефекта обновлен', 'success');
+            await loadDefectsFeed();
+            loadDashboardMetrics();
+        } else {
+            showToast('Не удалось изменить статус', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети: ' + e.message, 'error');
+    }
+}
+
+async function changeDefectUrgencyFeed(defectId, newUrgency) {
+    try {
+        const resp = await fetch(`/api/defects/${defectId}/urgency`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urgency: newUrgency })
+        });
+
+        if (resp.ok) {
+            showToast('Срочность обновлена', 'success');
+            await loadDefectsFeed();
+            loadDashboardMetrics();
+        } else {
+            showToast('Не удалось изменить срочность', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети: ' + e.message, 'error');
+    }
+}
+
+/* ==========================================================================
+   КПД И АНАЛИТИКА ЭФФЕКТИВНОСТИ (БЕЗОПАСНАЯ ЗАГРУЗКА)
    ========================================================================== */
 
 async function loadEfficiencyMetrics() {
@@ -953,76 +1209,114 @@ async function loadEfficiencyMetrics() {
 
         // Общий КПД
         const overall = Math.min(100, Math.max(0, data.overallKpiPercent !== undefined ? data.overallKpiPercent : (data.overallResolutionRate || 0)));
-        document.getElementById('kpiOverallRate').innerText = overall.toFixed(1) + '%';
-        document.getElementById('kpiOverallBar').style.width = overall + '%';
-        document.getElementById('kpiOverallSub').innerText = `${data.totalAccepted} из ${data.totalCreated} замечаний принято`;
+        safeSetText('kpiOverallRate', overall.toFixed(1) + '%');
+        safeSetWidth('kpiOverallBar', overall + '%');
+        safeSetText('kpiOverallSub', `${data.totalAccepted || 0} из ${data.totalCreated || 0} замечаний принято`);
 
         // КПД по срочным
         const urgent = Math.min(100, Math.max(0, data.urgentKpiPercent !== undefined ? data.urgentKpiPercent : (data.urgentResolutionRate || 0)));
-        document.getElementById('kpiUrgentRate').innerText = urgent.toFixed(1) + '%';
-        document.getElementById('kpiUrgentBar').style.width = urgent + '%';
-        document.getElementById('kpiUrgentSub').innerText = `Закрытие критичных позиций: ${urgent.toFixed(1)}%`;
+        safeSetText('kpiUrgentRate', urgent.toFixed(1) + '%');
+        safeSetWidth('kpiUrgentBar', urgent + '%');
+        safeSetText('kpiUrgentSub', `Закрытие критичных позиций: ${urgent.toFixed(1)}%`);
 
         // MTTR
-        document.getElementById('kpiMttrValue').innerText = (data.avgResolutionHours || 0) + ' ч';
-        document.getElementById('kpiAvgDays').innerText = `~ ${data.avgResolutionDays || 0} дн. на одно замечание`;
+        safeSetText('kpiMttrValue', (data.avgResolutionHours || 0) + ' ч');
+        safeSetText('kpiAvgDays', `~ ${data.avgResolutionDays || 0} дн. на одно замечание`);
 
         // Скорость / Темп
         const badge = document.getElementById('kpiVelocityBadge');
-        if (data.weeklyClosed > data.weeklyOpened) {
-            badge.innerText = 'ОПЕРЕЖЕНИЕ (+' + (data.weeklyClosed - data.weeklyOpened) + ')';
-            badge.style.color = '#81c784';
-        } else if (data.weeklyClosed < data.weeklyOpened) {
-            badge.innerText = 'ОТСТАВАНИЕ (-' + (data.weeklyOpened - data.weeklyClosed) + ')';
-            badge.style.color = '#ff8a80';
-        } else {
-            badge.innerText = 'ПАРИТЕТ (СТАБИЛЬНО)';
-            badge.style.color = '#ffb74d';
+        if (badge) {
+            if (data.weeklyClosed > data.weeklyOpened) {
+                badge.innerText = 'ОПЕРЕЖЕНИЕ (+' + (data.weeklyClosed - data.weeklyOpened) + ')';
+                badge.style.color = '#81c784';
+            } else if (data.weeklyClosed < data.weeklyOpened) {
+                badge.innerText = 'ОТСТАВАНИЕ (-' + (data.weeklyOpened - data.weeklyClosed) + ')';
+                badge.style.color = '#ff8a80';
+            } else {
+                badge.innerText = 'ПАРИТЕТ (СТАБИЛЬНО)';
+                badge.style.color = '#ffb74d';
+            }
         }
-        document.getElementById('kpiVelocitySub').innerText = `За неделю: +${data.weeklyOpened} открыто / ${data.weeklyClosed} закрыто`;
+        safeSetText('kpiVelocitySub', `За неделю: +${data.weeklyOpened || 0} открыто / ${data.weeklyClosed || 0} закрыто`);
 
         // Детализация
-        document.getElementById('kpiWeeklyOpened').innerText = data.weeklyOpened;
-        document.getElementById('kpiWeeklyClosed').innerText = data.weeklyClosed;
-        document.getElementById('kpiMonthlyOpened').innerText = data.monthlyOpened;
-        document.getElementById('kpiMonthlyClosed').innerText = data.monthlyClosed;
+        safeSetText('kpiWeeklyOpened', data.weeklyOpened || 0);
+        safeSetText('kpiWeeklyClosed', data.weeklyClosed || 0);
+        safeSetText('kpiMonthlyOpened', data.monthlyOpened || 0);
+        safeSetText('kpiMonthlyClosed', data.monthlyClosed || 0);
 
-        document.getElementById('kpiTotalCreated').innerText = data.totalCreated;
-        document.getElementById('kpiTotalAccepted').innerText = data.totalAccepted;
-        document.getElementById('kpiTotalInWork').innerText = data.totalInWork;
-        document.getElementById('kpiVelocityStatusText').innerText = data.velocityStatus || 'Данные формируются';
+        safeSetText('kpiTotalCreated', data.totalCreated || 0);
+        safeSetText('kpiTotalAccepted', data.totalAccepted || 0);
+        safeSetText('kpiTotalInWork', data.totalInWork || 0);
+        safeSetText('kpiVelocityStatusText', data.velocityStatus || 'Данные формируются');
 
         // Таблица приемщиков
         const tableBody = document.getElementById('workerStatsTableBody');
-        if (!data.workerStats || data.workerStats.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Нет данных по приемщикам</td></tr>';
-        } else {
-            tableBody.innerHTML = data.workerStats.map(w => {
-                const total = w.totalReported !== undefined ? w.totalReported : (w.reportedDefects || 0);
-                const urgentCount = w.urgentReported !== undefined ? w.urgentReported : (w.urgentDefects || 0);
-                const resolvedCount = w.resolved !== undefined ? w.resolved : (w.resolvedDefects || 0);
-                const rate = total > 0 ? (resolvedCount / total) * 100 : 100;
-                let rateColor = '#ff8a80';
-                if (rate >= 75) rateColor = '#81c784';
-                else if (rate >= 40) rateColor = '#ffb74d';
+        if (tableBody) {
+            if (!data.workerStats || data.workerStats.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Нет данных по приемщикам</td></tr>';
+            } else {
+                tableBody.innerHTML = data.workerStats.map(w => {
+                    const total = w.totalReported !== undefined ? w.totalReported : (w.reportedDefects || 0);
+                    const urgentCount = w.urgentReported !== undefined ? w.urgentReported : (w.urgentDefects || 0);
+                    const resolvedCount = w.resolved !== undefined ? w.resolved : (w.resolvedDefects || 0);
+                    const rate = total > 0 ? (resolvedCount / total) * 100 : 100;
+                    let rateColor = '#ff8a80';
+                    if (rate >= 75) rateColor = '#81c784';
+                    else if (rate >= 40) rateColor = '#ffb74d';
 
-                return `
-                    <tr>
-                        <td>
-                            <strong style="color: #fff;">${escapeHtml(w.workerName)}</strong>
-                            <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">ID: ${w.workerId} &bull; ПРИЕМЩИК</div>
-                        </td>
-                        <td style="text-align: center; font-weight: 600;">${total}</td>
-                        <td style="text-align: center; color: #ff8a80; font-weight: 700;">${urgentCount}</td>
-                        <td style="text-align: center; color: #81c784; font-weight: 700;">${resolvedCount}</td>
-                        <td style="text-align: center; font-weight: 700; color: ${rateColor};">
-                            ${rate.toFixed(1)}%
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+                    return `
+                        <tr>
+                            <td>
+                                <strong style="color: #fff;">${escapeHtml(w.workerName)}</strong>
+                                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">ID: ${w.workerId} &bull; ПРИЕМЩИК</div>
+                            </td>
+                            <td style="text-align: center; font-weight: 600;">${total}</td>
+                            <td style="text-align: center; color: #ff8a80; font-weight: 700;">${urgentCount}</td>
+                            <td style="text-align: center; color: #81c784; font-weight: 700;">${resolvedCount}</td>
+                            <td style="text-align: center; font-weight: 700; color: ${rateColor};">
+                                ${rate.toFixed(1)}%
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
         }
     } catch (e) {
-        showToast('Ошибка загрузки аналитики: ' + e.message, 'error');
+        showToast('Ошибка аналитики: ' + e.message, 'error');
     }
+}
+
+/* ==========================================================================
+   БЕЗОПАСНЫЕ ХЕЛПЕРЫ ОБНОВЛЕНИЯ DOM
+   ========================================================================== */
+
+function safeSetText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = (text !== undefined && text !== null) ? text : '';
+}
+
+function safeSetHtml(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = (html !== undefined && html !== null) ? html : '';
+}
+
+function safeSetWidth(id, width) {
+    const el = document.getElementById(id);
+    if (el) el.style.width = width;
+}
+
+function safeSetDisplay(id, display) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = display;
+}
+
+function safeAddClass(id, className) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add(className);
+}
+
+function safeRemoveClass(id, className) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove(className);
 }

@@ -52,7 +52,7 @@ public class DefectController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('WORKER', 'MANAGER')")
     public ResponseEntity<List<DefectDto>> searchDefects(
             @RequestParam(required = false) Integer entranceNumber,
             @RequestParam(required = false) Integer apartmentNumber,
